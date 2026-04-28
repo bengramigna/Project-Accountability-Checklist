@@ -14,38 +14,57 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
 
     steps:
+      # Download your repository's code onto the runner machine.
       - uses: actions/checkout@v4
 
-      - name: Set up Python version
-        uses: actions/setup-python@v5
+      # Install pnpm FIRST, before Node.js setup.
+      # pnpm must exist before setup-node runs — otherwise setup-node
+      # falls back to npm, which this project's preinstall script rejects.
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
         with:
-          python-version: '3.12'
+          version: 10
+          run_install: false
 
-      # 🛠️ Local Build Section (Optional)
-      # The following section in your workflow is designed to catch build issues early on the client side, before deployment. This can be helpful for debugging and validation. However, if this step significantly increases deployment time and early detection is not critical for your workflow, you may remove this section to streamline the deployment process.
-      - name: Create and Start virtual environment and Install dependencies
+      # Install Node.js 22. Runs after pnpm so it can use pnpm for caching.
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      # Install all third-party libraries across the monorepo.
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      # Build the frontend (Vite) and backend (esbuild).
+      # NODE_ENV=production tells build tools to optimize output.
+      # PORT and BASE_PATH are required by the Vite config.
+      - name: Build
+        run: pnpm -r --if-present run build
+        env:
+          NODE_ENV: production
+          PORT: "3000"
+          BASE_PATH: "/"
+
+      # Copy only the compiled output into a clean deploy/ folder.
+      # Azure only needs the built files, not the TypeScript source code.
+      - name: Prepare deployment package
         run: |
-          python -m venv antenv
-          source antenv/bin/activate
-          pip install -r requirements.txt
-                
-      # By default, when you enable GitHub CI/CD integration through the Azure portal, the platform automatically sets the SCM_DO_BUILD_DURING_DEPLOYMENT application setting to true. This triggers the use of Oryx, a build engine that handles application compilation and dependency installation (e.g., pip install) directly on the platform during deployment. Hence, we exclude the antenv virtual environment directory from the deployment artifact to reduce the payload size. 
-      - name: Upload artifact for deployment jobs
+          mkdir -p deploy/artifacts/api-server
+          mkdir -p deploy/artifacts/responsiboard-project
+          cp -r artifacts/api-server/dist deploy/artifacts/api-server/dist
+          cp -r artifacts/responsiboard-project/dist deploy/artifacts/responsiboard-project/dist
+
+      # Upload the deploy/ folder so the deploy job can access it.
+      - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
-          name: python-app
-          path: |
-            .
-            !antenv/
-
-      # 🚫 Opting Out of Oryx Build
-      # If you prefer to disable the Oryx build process during deployment, follow these steps:
-      # 1. Remove the SCM_DO_BUILD_DURING_DEPLOYMENT app setting from your Azure App Service Environment variables.
-      # 2. Refer to sample workflows for alternative deployment strategies: https://github.com/Azure/actions-workflow-samples/tree/master/AppService
-      
+          name: node-app
+          path: deploy/
 
   deploy:
     runs-on: ubuntu-latest
