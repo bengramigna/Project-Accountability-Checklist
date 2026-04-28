@@ -1,8 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
-# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
 
-name: Build and deploy Python app to Azure Web App - Responsiboard-Project
+name: Build and deploy Node.js app to Azure Web App - Responsiboard-Project
 
 on:
   push:
@@ -20,6 +19,7 @@ jobs:
       # Download your repository's code onto the runner machine.
       - uses: actions/checkout@v4
 
+<<<<<<< HEAD
       # Install pnpm FIRST, before Node.js setup.
       # pnpm must exist before setup-node runs — otherwise setup-node
       # falls back to npm, which this project's preinstall script rejects.
@@ -60,11 +60,28 @@ jobs:
           cp -r artifacts/responsiboard-project/dist deploy/artifacts/responsiboard-project/dist
 
       # Upload the deploy/ folder so the deploy job can access it.
+=======
+      - name: Set up Node.js version
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22.x'
+
+      - name: npm install, build, and test
+        run: |
+          npm install
+          npm run build --if-present
+          npm run test --if-present
+
+>>>>>>> f55e5711115475c2f3b86822ff4cc2cfc3804b34
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
+<<<<<<< HEAD
           path: deploy/
+=======
+          path: .
+>>>>>>> f55e5711115475c2f3b86822ff4cc2cfc3804b34
 
   deploy:
     runs-on: ubuntu-latest
@@ -74,12 +91,13 @@ jobs:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: python-app
+          name: node-app
       
       - name: 'Deploy to Azure Web App'
-        uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
         with:
           app-name: 'Responsiboard-Project'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_08A50CF8F8A445FA8C4993C43AB2C831 }}
+          package: .
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_7FF79173BE9A49D4AC0FE4F75267D13A }}
