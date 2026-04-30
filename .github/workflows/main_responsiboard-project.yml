@@ -54,9 +54,9 @@ jobs:
       - name: Prepare deployment package
         run: |
           mkdir -p deploy/artifacts/api-server
-          mkdir -p deploy/artifacts/Responsiboard-Project
+          mkdir -p deploy/artifacts/responsiboard
           cp -r artifacts/api-server/dist deploy/artifacts/api-server/dist
-          cp -r artifacts/responsiboard-project/dist deploy/artifacts/responsiboard-project/dist
+          cp -r artifacts/responsiboard/dist deploy/artifacts/responsiboard/dist
 
       # Upload the deploy/ folder so the deploy job can access it.
       - name: Upload artifact for deployment job
